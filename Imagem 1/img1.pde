@@ -18,7 +18,7 @@ void draw() {
   image(aux2, aux2.width * 2 + 20, 0);
   image(imgMask, 0, img.height + 10);
   
-  save("cross.png");
+  save("result.png");
 }
 
 PImage thresholding(PImage aux2) {
