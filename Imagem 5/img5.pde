@@ -4,79 +4,60 @@ void setup() {
 }
 
 void draw() {
-  PImage img = loadImage("img4.png");
-  PImage imgMask = loadImage("img4 - mask.png");
-  PImage aux = loadImage("img4.png");
-  PImage segmentedImg = createImage(img.width, img.height, RGB);
+  PImage img = loadImage("img5.png"); // Carrega a variável que armazena a imagem original
+  PImage imgMask = loadImage("img5 - mask.png");
+  PImage aux = loadImage("img5.png");
+  PImage segmentedImg = createImage(img.width, img.height, RGB); // Cria uma nova imagem para a segmentação
 
-  color[] colors = new color[] {
-    color(255, 0, 0), color(0, 255, 0), color(0, 0, 255)
-  };
+  // Aplica o filtro BLUR na imagem original 
 
-  aux = segmentImage(aux, colors);
+  aux = filters(aux);
   verificarPixel(imgMask, aux);
   segmentedImg = mergeImageWithGroundTruth(aux, segmentedImg, img);
 
   image(img, 0, 0);
   image(aux, aux.width + 10, 0);
   image(segmentedImg, segmentedImg.width * 2 + 20, 0);
-  image(imgMask, 0, img.height + 10);
+  image(imgMask, 0, img.height + 10); // Exibe a imagem segmentada
 
-  save("result.png");
-
+  save("result.png"); // Salva a imagem segmentada com o nome "segmentedImg.png"
 }
 
-// Função para realizar a segmentação semântica
-PImage segmentImage(PImage img, color[] colors) {
-  PImage segmentedImg = createImage(img.width, img.height, ARGB);
+PImage filters(PImage aux2) {
+  aux2.filter(BLUR);
 
-  // Para cada pixel da imagem, determinar a cor mais próxima no array de cores
-  for (int x = 0; x < img.width; x++) {
-    for (int y = 0; y < img.height; y++) {
-      color c = img.get(x, y);
-      c = color(red(c), green(c), blue(c)); // remover o canal alpha da cor
-      color closestColor = colors[0];
-      float closestDist = dist(red(c), green(c), blue(c), red(closestColor), green(closestColor), blue(closestColor));
-      for (int i = 1; i < colors.length; i++) {
-        float d = dist(red(c), green(c), blue(c), red(colors[i]), green(colors[i]), blue(colors[i]));
-        if (d < closestDist) {
-          closestColor = colors[i];
-          closestDist = d;
-        }
-      }
-      segmentedImg.set(x, y, color(red(closestColor), green(closestColor), blue(closestColor))); // desabilitar o canal alpha da cor
-    }
-  }
-
-  for (int y = 0; y < segmentedImg.height; y++) {
-    for (int x = 0; x < segmentedImg.width; x++) {
-      int pos = (y) * segmentedImg.width + (x);
-
-      if (red(segmentedImg.pixels[pos]) > 50 && x > 50 && x < 530 && y < 390 && y > 100) {
-        segmentedImg.pixels[pos] = color(255);
+  // Percorre todos os pixels da imagem e verifica se o valor do canal vermelho é maior do que o canal verde e o azul
+  for (int y = 0; y < aux2.height; y++) {
+    for (int x = 0; x < aux2.width; x++) {
+      int pos = y * aux2.width + x;
+      if (red(aux2.pixels[pos]) > green(aux2.pixels[pos]) && red(aux2.pixels[pos]) > blue(aux2.pixels[pos])) {
+        // Se a condição for verdadeira, pinta o pixel na imagem segmentada de branco, caso contrário, pinta de preto
+        aux2.pixels[pos] = color(255);
       } else {
-        segmentedImg.pixels[pos] = color(0);
+        aux2.pixels[pos] = color(0);
       }
     }
   }
 
-  for (int x = 0; x < img.width; x++) {
-    for (int y = 0; y < img.height; y++) {
-      int pos = y * img.width + x;
-      color c = segmentedImg.pixels[pos];
-      if (((x - 590) * (x - 590)) / (200 * 200) + ((y - 445) * (y - 445)) / (133 * 133) <= 1) {
-        segmentedImg.pixels[pos] = color(0);
-      } else if (((x) * (x)) / (200 * 200) + ((y) * (y)) / (133 * 133) <= 1) {
-        segmentedImg.pixels[pos] = color(0);
-      } else {
-        segmentedImg.pixels[pos] = c;
-      }
+  // Pinta os pixels de cima para baixo em um terço da altura da imagem de preto
+  for (int y = 0; y < aux2.height / 5; y++) {
+    for (int x = 0; x < aux2.width; x++) {
+      int pos = y * aux2.width + x;
+      aux2.pixels[pos] = color(0);
     }
   }
 
-  segmentedImg.updatePixels();
+  // Pinta os pixels de baixo para cima em um quinto da altura da imagem de preto
+  for (int y = aux2.height - 1; y > aux2.height * 4 / 5; y--) {
+    for (int x = 0; x < aux2.width; x++) {
+      int pos = y * aux2.width + x;
+      aux2.pixels[pos] = color(0);
+    }
+  }
 
-  return segmentedImg;
+  aux2.updatePixels(); // Atualiza os pixels da imagem segmentada
+
+  return aux2;
 }
 
 void verificarPixel(PImage originalImage, PImage newImage) {
@@ -85,7 +66,6 @@ void verificarPixel(PImage originalImage, PImage newImage) {
   float percentFN = 0, percentFP = 0, percentV = 0;
 
   if (originalImage.height == newImage.height && originalImage.width == newImage.width) {
-
     println("IMAGENS DE DIMENSÕES IGUAIS");
     int posO, posN;
     int pAuxO, pAuxN;
